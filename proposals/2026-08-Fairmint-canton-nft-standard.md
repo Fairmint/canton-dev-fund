@@ -4,6 +4,8 @@
 **Org:** Fairmint, Inc.
 **Status:** Submitted
 **Created:** 2026-08-12
+**Proposal Type:** RFP-aligned
+**RFP / Roadmap Area:** RFP-12 RWA Standards (Financial Markets, Standards and Verification)
 **Label:** token-asset-standards
 **Champion:** IntellectEU
 
@@ -367,17 +369,13 @@ Upon release, Fairmint will collaborate with the Foundation on:
 
 ## Motivation
 
-Why this is valuable to the Canton ecosystem:
+A wallet or venue that wants to show unique assets on Canton today has to integrate each
+issuer's item model on its own. That work repeats for every new issuer. One shared profile
+is one implementation for the wallet and one spec for the issuer. Institutions also get
+private, consent-based item semantics.
 
-- Ecosystem teams already define their own item conventions for lack of a standard. Each
-  additional bespoke NFT model is another integration wallets and indexers must build separately.
-- Beneficiaries: wallets (one integration renders any conforming unique asset) and unique-asset
-  applications: marketplaces, credential issuers, RWA registries, equity and fund tokenization.
-- The item-semantics layer runs today as a prototype with tests and built artifacts. The grant
-  funds the V2-rails implementation, CIP governance, and adoption.
-- The privacy properties (no global enumeration, no public holder disclosure, consent-based
-  transfer) are not available in public-chain NFT standards and matter to institutions holding
-  regulated unique assets.
+Fairmint will issue its equity certificates under the standard. Milestone 3 also requires
+at least two independent integrators.
 
 ---
 
