@@ -79,10 +79,10 @@ Items are metric observations.
 | Feed | `generated_at`, `next` | Generation time and the cursor for the next page |
 | Item | `item_id` | Identifies one immutable observation; consumers dedupe on it like an RSS `guid` |
 | Item | `asset` | `id_scheme` (`cip0056-instrument`, `registry-scoped`, `isin`, `cusip`), `id`, `asset_class`, optional `name` and `symbol` |
-| Item | `metric` | Vocabulary key, for example `equity/shares_outstanding`; extensions use a DNS-prefixed key |
-| Item | `value`, `unit` | Decimal as string; unit from the profile (`shares`, `count`, `usd`, `face_usd`) |
+| Item | `metric` | Vocabulary key, for example `equity/valuation_usd`; extensions use a DNS-prefixed key |
+| Item | `value`, `unit` | Decimal as string; unit from the profile (`count`, `usd`, `cc`, `gb`, `shares`, `face_usd`) |
 | Item | `as_of` | Point in time, or `period_start` and `period_end` for flows |
-| Item | `dimensions` | Profile-defined breakdown keys, for example `class_type=common` |
+| Item | `dimensions` | Profile-defined breakdown keys. The version 1 equity profile uses none |
 | Item | `trust` | `declared`, `recomputed`, or `proven` |
 | Item | `evidence` | Source ledger coordinates where they exist (record time, migration id, update id, package ids), methodology URL and hash, and the `anchor` block (declaration contract id, update id, record time, mode, root, leaf salt, inclusion path), excluded from the leaf hash |
 | Item | `privacy` | `visibility` (`public` or `restricted`), aggregation level (`publisher`, `asset`, or `record`), and the suppression rule applied where the profile requires one |
@@ -248,17 +248,20 @@ platform maps profile metrics to its own catalog.
 
 Fairmint, an SEC-registered transfer agent, operates the Open Cap Table
 Protocol on Canton for private companies. It publishes the `equity`
-profile (public aggregate) as a single daily aggregate across every
-private-company register it operates, computed from the official projections
-it commits onchain: shares outstanding, split into common and preferred,
-shares issued in the period, holders of record, and the aggregate valuation
-of the companies in scope at their most recent priced round. No company-level
-item is published, with or without consent: a single aggregate, with the
-profile's suppression rule applied to daily changes, is what keeps any one
-register unidentifiable. Public-company equity recorded natively on
-Canton will be a separate profile under section 2.11, since public issuers
-control their own disclosures. Fairmint is the registry, not the issuer, and
-does not sell customer data.
+profile (Appendix B) as one feed. Each day the feed carries figures that
+describe Fairmint itself and contain no customer position, holder, or
+company value: companies onboarded, cap tables administered, tokenized
+securities administered, and Fairmint's own Canton activity. Once a calendar
+quarter, in UTC, it publishes one equity total: the sum of in-scope
+companies' valuations at their most recent priced round, rounded down to the
+nearest 100,000,000 USD. Daily snapshots repeat that total until the next
+quarter. The methodology hashed into every declaration states which
+companies are in the sum and the threshold above which a company is left
+out. A company above that threshold is omitted until its valuation is public
+or it agrees to be included. No company-level item is published.
+Public-company equity recorded natively on Canton will be a separate profile
+under section 2.11, since public issuers control their own disclosures.
+Fairmint is the registry, not the issuer, and does not sell customer data.
 
 #### 2.10 Milestone 2 feed: a second publisher
 
@@ -529,17 +532,17 @@ they land.
   "next": "eyJzaW5jZSI6IjIwMjYtMDktMTcifQ",
   "items": [
     {
-      "item_id": "fairmint-ocp:equity/shares_outstanding:all:2026-09-16",
+      "item_id": "fairmint-ocp:equity/valuation_usd:2026-09-30",
       "asset": {
         "id_scheme": "registry-scoped",
         "id": "fairmint-ocp:all-registers",
         "asset_class": "equity"
       },
-      "metric": "equity/shares_outstanding",
-      "value": "184213977",
-      "unit": "shares",
-      "as_of": "2026-09-16T23:59:59Z",
-      "dimensions": { "class_type": "all" },
+      "metric": "equity/valuation_usd",
+      "value": "1600000000",
+      "unit": "usd",
+      "as_of": "2026-09-30T23:59:59Z",
+      "dimensions": {},
       "trust": "declared",
       "evidence": {
         "record_time": "2026-09-17T00:04:12Z",
@@ -562,7 +565,7 @@ they land.
           ]
         }
       },
-      "privacy": { "visibility": "public", "aggregation": "publisher", "suppression": "min-count-5" },
+      "privacy": { "visibility": "public", "aggregation": "publisher", "suppression": "floor-100000000" },
       "signature": { "key_id": "cadf-2026-a", "alg": "ed25519", "sig": "<base64>" }
     }
   ]
@@ -584,23 +587,27 @@ envelope and are not part of version 1.
 
 ### `equity`
 
-Version 1 covers private-company registers and is deliberately small: one
-aggregate across every register the publisher operates. Further metrics are
-added as profile revisions under section 2.11.
+Version 1 is the Fairmint feed. Daily metrics describe the publisher and
+contain no customer data. The equity total is one aggregate across the
+registers in scope, released quarterly. Further metrics are added as profile
+revisions under section 2.11.
 
 | Metric | Unit | Notes |
 | ------ | ---- | ----- |
-| `equity/shares_outstanding` | shares | Outstanding quantity across all registers at `as_of`, repeated per `class_type`; a scale measure, not a value |
-| `equity/shares_issued` | shares | Quantity issued across all registers in the period |
-| `equity/holders_count` | count | Holders of record at `as_of`, summed across registers |
-| `equity/valuation_usd` | usd | Sum over the companies in scope of the valuation recorded at each company's most recent priced round. The valuation rule is part of the profile methodology and hashed into every declaration |
+| `equity/companies_onboarded` | count | Companies onboarded. Published daily. The count never decreases |
+| `equity/cap_tables` | count | Cap tables Fairmint administers. Published daily |
+| `equity/tokenized_securities` | count | Tokenized securities Fairmint administers, counted from each security's public launch. Published daily |
+| `equity/canton_transactions` | count | Transactions Fairmint submits. Published daily |
+| `equity/network_traffic_gb` | gb | Data volume Fairmint's nodes send. Published daily |
+| `equity/canton_coin_spent` | cc | Canton Coin Fairmint spends on that traffic. Published daily |
+| `equity/app_rewards` | cc | Fairmint's Canton app rewards, as one total. Published daily |
+| `equity/valuation_usd` | usd | Sum of in-scope companies' valuations at each company's most recent priced round, rounded down to the nearest 100,000,000. Released once a calendar quarter (UTC). Daily snapshots repeat it and keep that quarter's `as_of`. The valuation rule and the exclusion threshold are part of the profile methodology and hashed into every declaration |
 
-Dimensions: `class_type`, either an OCF stock class type (common, preferred)
-or `all` for the total. Only `shares_outstanding` is split by class; the
-other metrics carry `all`. There is no `company` dimension: any
-company-level item would let a reader count and identify registers, so the
-profile publishes one aggregate only. Public-company equity is a separate
-profile (section 2.9).
+There is no `company` dimension and no class split. A company-level item
+would let a reader identify a register, so the profile publishes one
+aggregate only. A company above the methodology's threshold is omitted from
+`equity/valuation_usd` until its valuation is public or it agrees to be
+included. Public-company equity is a separate profile (section 2.9).
 
 ## Appendix C: Atom mapping
 
